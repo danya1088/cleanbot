@@ -42,8 +42,6 @@ class OrderFlow(StatesGroup):
     waiting_for_photo = State()
     waiting_for_payment = State()
 
-user_data = {}
-
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
@@ -52,10 +50,7 @@ async def start(message: types.Message, state: FSMContext):
             for name in products
         ]
     )
-    await message.answer("Добро пожаловать!")
-
-    await message.answer("Выберите услугу:", reply_markup=keyboard)
-
+    await message.answer("Добро пожаловать!\n\nВыберите услугу:", reply_markup=keyboard)
     await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
@@ -100,16 +95,12 @@ async def payment_success(message: types.Message, state: FSMContext):
     photo_id = data.get("photo")
     user = message.from_user
 
-    text = (
-        f"Новый заказ!
+    text = f"""Новый заказ!
 
-"
-        f"Услуга: {product}
-"
-        f"Адрес: {address}
-"
-        f"Пользователь: @{user.username or user.first_name}"
-    )
+Услуга: {product}
+Адрес: {address}
+Пользователь: @{user.username or user.first_name}
+"""
 
     await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
     await message.answer("Заказ принят! Курьер приедет в течение 20 минут.")
