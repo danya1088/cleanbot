@@ -1,9 +1,12 @@
 import asyncio
 import os
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
 from aiogram.filters import CommandStart
 from aiogram.enums import ContentType
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.getenv("TOKEN")
 PAYMENT_TOKEN = os.getenv("PAYMENT_TOKEN")
@@ -31,8 +34,15 @@ user_order = {}
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    await message.answer("🔥 Добро пожаловать в сервис!")
-    await message.answer("Нажмите /start чтобы выбрать услугу.")
+    await message.answer("🔥 Добро пожаловать в сервис!\n\nНажмите кнопку ниже, чтобы выбрать услугу:")
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🛒 Перейти в каталог", callback_data="open_catalog")]
+        ]
+    )
+    await message.answer("👇 Выберите действие:", reply_markup=keyboard)
+
 @dp.callback_query(F.data == "open_catalog")
 async def open_catalog(callback_query: types.CallbackQuery):
     keyboard = InlineKeyboardMarkup(
@@ -56,7 +66,7 @@ async def choose_service(callback_query: types.CallbackQuery):
                 [InlineKeyboardButton(text="Большой объём", callback_data="volume_3")]
             ]
         )
-        await callback_query.message.answer("📦 Вы выбрали крупный мусор. Укажите объём:", reply_markup=keyboard)
+        await callback_query.message.answer("📦 Укажите объём крупного мусора:", reply_markup=keyboard)
     else:
         await create_invoice(callback_query, quantity=1)
     await callback_query.answer()
