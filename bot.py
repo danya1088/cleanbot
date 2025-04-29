@@ -37,55 +37,50 @@ products = {
     }
 }
 
-user_data = {}
-
-class OrderForm(StatesGroup):
+class OrderFlow(StatesGroup):
     waiting_for_address = State()
     waiting_for_photo = State()
-    waiting_for_time = State()
-    waiting_for_product = State()
+    waiting_for_payment = State()
+
+user_data = {}
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
-    await message.answer("👋 Добро пожаловать!\n\n📍 Пожалуйста, укажите точный адрес для вывоза мусора.")
-    await state.set_state(OrderForm.waiting_for_address)
-
-@dp.message(OrderForm.waiting_for_address)
-async def address_step(message: types.Message, state: FSMContext):
-    await state.update_data(address=message.text)
-    await message.answer("📸 Теперь отправьте фото мусора.")
-    await state.set_state(OrderForm.waiting_for_photo)
-
-@dp.message(OrderForm.waiting_for_photo, F.photo)
-async def photo_step(message: types.Message, state: FSMContext):
-    photo_id = message.photo[-1].file_id
-    await state.update_data(photo=photo_id)
-    await message.answer("🕐 Укажите удобное время для выноса (например, 'в течение 30 минут' или 'после 18:00').")
-    await state.set_state(OrderForm.waiting_for_time)
-
-@dp.message(OrderForm.waiting_for_time)
-async def time_step(message: types.Message, state: FSMContext):
-    await state.update_data(time=message.text)
-
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=name, callback_data=f"choose_{name}")]
-            for name in products.keys()
+            for name in products
         ]
     )
+    await message.answer("👋 Добро пожаловать!
 
-    await message.answer("✅ Спасибо! Теперь выберите услугу:", reply_markup=keyboard)
-    await state.set_state(OrderForm.waiting_for_product)
+🛒 Выберите услугу:", reply_markup=keyboard)
+    await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
-async def choose_service(callback_query: types.CallbackQuery, state: FSMContext):
-    product_name = callback_query.data.split("_", 1)[1]
+async def choose_product(callback: types.CallbackQuery, state: FSMContext):
+    product_name = callback.data.split("_", 1)[1]
     await state.update_data(product=product_name)
+    await callback.message.answer("📍 Введите адрес, куда нужно подъехать:")
+    await state.set_state(OrderFlow.waiting_for_address)
+    await callback.answer()
+
+@dp.message(OrderFlow.waiting_for_address)
+async def get_address(message: types.Message, state: FSMContext):
+    await state.update_data(address=message.text)
+    await message.answer("📸 Теперь отправьте фото мусора:")
+    await state.set_state(OrderFlow.waiting_for_photo)
+
+@dp.message(OrderFlow.waiting_for_photo, F.photo)
+async def get_photo(message: types.Message, state: FSMContext):
+    photo_id = message.photo[-1].file_id
+    await state.update_data(photo=photo_id)
     data = await state.get_data()
+    product_name = data["product"]
     product = products[product_name]
 
     await bot.send_invoice(
-        chat_id=callback_query.from_user.id,
+        chat_id=message.chat.id,
         title=product_name,
         description=product["description"],
         payload=product_name,
@@ -94,29 +89,32 @@ async def choose_service(callback_query: types.CallbackQuery, state: FSMContext)
         prices=[LabeledPrice(label=product_name, amount=product["price"])],
         start_parameter="clean_order"
     )
-    await callback_query.answer()
+    await state.set_state(OrderFlow.waiting_for_payment)
 
 @dp.message(F.content_type == ContentType.SUCCESSFUL_PAYMENT)
-async def successful_payment(message: types.Message, state: FSMContext):
+async def payment_success(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    product_name = data.get("product")
+    product = data.get("product")
     address = data.get("address")
     photo_id = data.get("photo")
-    time = data.get("time")
-
-    await message.answer("✅ Спасибо за заказ! Курьер приедет в указанное время.")
+    user = message.from_user
 
     text = (
-        f"🧾 Новый заказ!\n"
-        f"📍 Адрес: {address}\n"
-        f"🕐 Время: {time}\n"
-        f"🛍 Услуга: {product_name}\n"
-        f"👤 @{message.from_user.username or 'без username'}"
-    )
-    await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
+        f"📬 Новый заказ!
 
+"
+        f"🛍 Услуга: {product}
+"
+        f"📍 Адрес: {address}
+"
+        f"👤 Пользователь: @{user.username or user.first_name}"
+    )
+
+    await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
+    await message.answer("✅ Заказ принят! Курьер приедет в течение 20 минут.")
     await state.clear()
 
+# Webhook
 async def handle_webhook(request):
     body = await request.read()
     update = types.Update.model_validate_json(body.decode())
