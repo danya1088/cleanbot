@@ -52,7 +52,7 @@ async def start(message: types.Message, state: FSMContext):
             for name in products
         ]
     )
-    await message.answer("👋 Добро пожаловать!
+    await message.answer("👋 Добро пожаловать!")
 
 🛒 Выберите услугу:", reply_markup=keyboard)
     await state.clear()
