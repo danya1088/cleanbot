@@ -52,23 +52,23 @@ async def start(message: types.Message, state: FSMContext):
             for name in products
         ]
     )
-    await message.answer("👋 Добро пожаловать!")
+    await message.answer("Добро пожаловать!
 
-🛒 Выберите услугу:", reply_markup=keyboard)
+Выберите услугу:", reply_markup=keyboard)
     await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
 async def choose_product(callback: types.CallbackQuery, state: FSMContext):
     product_name = callback.data.split("_", 1)[1]
     await state.update_data(product=product_name)
-    await callback.message.answer("📍 Введите адрес, куда нужно подъехать:")
+    await callback.message.answer("Введите адрес, куда нужно подъехать:")
     await state.set_state(OrderFlow.waiting_for_address)
     await callback.answer()
 
 @dp.message(OrderFlow.waiting_for_address)
 async def get_address(message: types.Message, state: FSMContext):
     await state.update_data(address=message.text)
-    await message.answer("📸 Теперь отправьте фото мусора:")
+    await message.answer("Теперь отправьте фото мусора:")
     await state.set_state(OrderFlow.waiting_for_photo)
 
 @dp.message(OrderFlow.waiting_for_photo, F.photo)
@@ -100,18 +100,18 @@ async def payment_success(message: types.Message, state: FSMContext):
     user = message.from_user
 
     text = (
-        f"📬 Новый заказ!
+        f"Новый заказ!
 
 "
-        f"🛍 Услуга: {product}
+        f"Услуга: {product}
 "
-        f"📍 Адрес: {address}
+        f"Адрес: {address}
 "
-        f"👤 Пользователь: @{user.username or user.first_name}"
+        f"Пользователь: @{user.username or user.first_name}"
     )
 
     await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
-    await message.answer("✅ Заказ принят! Курьер приедет в течение 20 минут.")
+    await message.answer("Заказ принят! Курьер приедет в течение 20 минут.")
     await state.clear()
 
 # Webhook
