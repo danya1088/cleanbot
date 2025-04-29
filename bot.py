@@ -47,9 +47,7 @@ class OrderForm(StatesGroup):
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
-    await message.answer("👋 Добро пожаловать!
-
-📍 Пожалуйста, укажите точный адрес для вывоза мусора.")
+    await message.answer("👋 Добро пожаловать!\n\n📍 Пожалуйста, укажите точный адрес для вывоза мусора.")
     await state.set_state(OrderForm.waiting_for_address)
 
 @dp.message(OrderForm.waiting_for_address)
@@ -109,14 +107,10 @@ async def successful_payment(message: types.Message, state: FSMContext):
     await message.answer("✅ Спасибо за заказ! Курьер приедет в указанное время.")
 
     text = (
-        f"🧾 Новый заказ!
-"
-        f"📍 Адрес: {address}
-"
-        f"🕐 Время: {time}
-"
-        f"🛍 Услуга: {product_name}
-"
+        f"🧾 Новый заказ!\n"
+        f"📍 Адрес: {address}\n"
+        f"🕐 Время: {time}\n"
+        f"🛍 Услуга: {product_name}\n"
         f"👤 @{message.from_user.username or 'без username'}"
     )
     await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
