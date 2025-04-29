@@ -54,7 +54,8 @@ async def start(message: types.Message, state: FSMContext):
     )
     await message.answer("Добро пожаловать!")
 
-Выберите услугу:", reply_markup=keyboard)
+    await message.answer("Выберите услугу:", reply_markup=keyboard)
+
     await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
