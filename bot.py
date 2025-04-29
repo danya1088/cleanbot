@@ -1,16 +1,18 @@
 import asyncio
 import os
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
-from aiogram.filters import CommandStart
-from aiogram.enums import ContentType
 import logging
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.enums import ContentType
+from aiogram.filters import CommandStart
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
+from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.getenv("TOKEN")
 PAYMENT_TOKEN = os.getenv("PAYMENT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -103,8 +105,18 @@ async def successful_payment(message: types.Message):
     await message.answer("✅ Заказ оплачен. Курьер свяжется с вами в течение 20 минут.")
     await bot.send_message(ADMIN_ID, f"Новый заказ: {product_name} × {qty} от @{message.from_user.username}")
 
-async def main():
-    await dp.start_polling(bot)
+async def handle_webhook(request):
+    body = await request.read()
+    update = types.Update.model_validate_json(body.decode())
+    await dp.feed_update(bot, update)
+    return web.Response()
+
+async def on_startup(app):
+    await bot.set_webhook(WEBHOOK_URL)
+
+app = web.Application()
+app.router.add_post("/", handle_webhook)
+app.on_startup.append(on_startup)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    web.run_app(app, port=10000)
