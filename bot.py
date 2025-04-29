@@ -31,8 +31,8 @@ user_order = {}
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-await message.answer("🔥 Добро пожаловать в сервис!")
-await message.answer("Нажмите /start чтобы выбрать услугу.")
+    await message.answer("🔥 Добро пожаловать в сервис!")
+    await message.answer("Нажмите /start чтобы выбрать услугу.")
 @dp.callback_query(F.data == "open_catalog")
 async def open_catalog(callback_query: types.CallbackQuery):
     keyboard = InlineKeyboardMarkup(
