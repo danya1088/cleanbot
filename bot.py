@@ -31,7 +31,7 @@ user_order = {}
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    await message.answer("👋 Добро пожаловать в сервис!
+await message.answer("🔥 Добро пожаловать в сервис!")
 Нажмите /start чтобы выбрать услугу.")
 
 @dp.callback_query(F.data == "open_catalog")
