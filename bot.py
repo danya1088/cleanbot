@@ -10,11 +10,11 @@ from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.getenv("8076919458:AAGpogsbimGR7_GcLQ2HK8FoAo-wmqPaK78")
-ADMIN_ID = int(os.getenv("1774333684"))
-WEBHOOK_URL = os.getenv("https://cleanbot-1.onrender.com/")
-PHONE_NUMBER = os.getenv("+79877579144")
-BANK_NAME = os.getenv("Озон банк")
+TOKEN = os.getenv("TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+PHONE_NUMBER = os.getenv("PHONE_NUMBER")
+BANK_NAME = os.getenv("BANK_NAME")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
