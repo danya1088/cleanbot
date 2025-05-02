@@ -1,4 +1,3 @@
-import asyncio
 import os
 import logging
 from aiogram import Bot, Dispatcher, types, F
@@ -6,41 +5,30 @@ from aiogram.enums import ContentType
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import (
-    InlineKeyboardMarkup, InlineKeyboardButton,
-    LabeledPrice
-)
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.getenv("TOKEN")
-PAYMENT_TOKEN = os.getenv("PAYMENT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+TOKEN = os.getenv("8076919458:AAGpogsbimGR7_GcLQ2HK8FoAo-wmqPaK78")
+ADMIN_ID = int(os.getenv("1774333684"))
+WEBHOOK_URL = os.getenv("https://cleanbot-1.onrender.com/")
+PHONE_NUMBER = os.getenv("+79877579144")
+BANK_NAME = os.getenv("Озон банк")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 products = {
-    "Уборка 1 пакет": {
-        "description": "Вынос одного пакета бытового мусора.",
-        "price": 10000
-    },
-    "Уборка 2-3 пакета": {
-        "description": "Вынос двух или трёх пакетов мусора.",
-        "price": 20000
-    },
-    "Крупный мусор": {
-        "description": "Вынос мебели и строительного мусора.",
-        "price": 40000
-    }
+    "🛍 Уборка 1 пакет": 100,
+    "🧺 Уборка 2-3 пакета": 200,
+    "🛒 Крупный мусор": 400
 }
 
-class OrderFlow(StatesGroup):
+class OrderStates(StatesGroup):
     waiting_for_address = State()
     waiting_for_photo = State()
-    waiting_for_payment = State()
+    waiting_for_payment_proof = State()
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
@@ -50,61 +38,67 @@ async def start(message: types.Message, state: FSMContext):
             for name in products
         ]
     )
-    await message.answer("Добро пожаловать!\n\nВыберите услугу:", reply_markup=keyboard)
+    await message.answer(
+        "Добро пожаловать! 👋\n\nВыберите услугу, которую нужно выполнить:",
+        reply_markup=keyboard
+    )
     await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
 async def choose_product(callback: types.CallbackQuery, state: FSMContext):
     product_name = callback.data.split("_", 1)[1]
     await state.update_data(product=product_name)
-    await callback.message.answer("Введите адрес, куда нужно подъехать:")
-    await state.set_state(OrderFlow.waiting_for_address)
+    await callback.message.answer("📍 Введите адрес, куда нужно подъехать:")
+    await state.set_state(OrderStates.waiting_for_address)
     await callback.answer()
 
-@dp.message(OrderFlow.waiting_for_address)
-async def get_address(message: types.Message, state: FSMContext):
+@dp.message(OrderStates.waiting_for_address)
+async def address_step(message: types.Message, state: FSMContext):
     await state.update_data(address=message.text)
-    await message.answer("Теперь отправьте фото мусора:")
-    await state.set_state(OrderFlow.waiting_for_photo)
+    await message.answer("📸 Теперь отправьте фото мусора:")
+    await state.set_state(OrderStates.waiting_for_photo)
 
-@dp.message(OrderFlow.waiting_for_photo, F.photo)
-async def get_photo(message: types.Message, state: FSMContext):
+@dp.message(OrderStates.waiting_for_photo, F.photo)
+async def photo_step(message: types.Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     await state.update_data(photo=photo_id)
     data = await state.get_data()
-    product_name = data["product"]
-    product = products[product_name]
+    product = data["product"]
+    price = products[product]
 
-    await bot.send_invoice(
-        chat_id=message.chat.id,
-        title=product_name,
-        description=product["description"],
-        payload=product_name,
-        provider_token=PAYMENT_TOKEN,
-        currency="RUB",
-        prices=[LabeledPrice(label=product_name, amount=product["price"])],
-        start_parameter="clean_order"
+    await message.answer(
+        f"💳 Для завершения заказа переведите <b>{price}₽</b> на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME})\n"
+        "После перевода отправьте чек или скриншот подтверждения.",
+        parse_mode="HTML"
     )
-    await state.set_state(OrderFlow.waiting_for_payment)
+    await state.set_state(OrderStates.waiting_for_payment_proof)
 
-@dp.message(F.content_type == ContentType.SUCCESSFUL_PAYMENT)
-async def payment_success(message: types.Message, state: FSMContext):
+@dp.message(OrderStates.waiting_for_payment_proof, F.photo)
+async def payment_proof_step(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    product = data.get("product")
-    address = data.get("address")
-    photo_id = data.get("photo")
     user = message.from_user
 
-    text = f"""Новый заказ!
+    caption = f"""ПОДТВЕРЖДЕНИЕ ОПЛАТЫ
 
-Услуга: {product}
-Адрес: {address}
+Услуга: {data['product']}
+Адрес: {data['address']}
 Пользователь: @{user.username or user.first_name}
-"""
+Подтвердите выполнение заказа?"""
 
-    await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id, caption=text)
-    await message.answer("Заказ принят! Курьер приедет в течение 20 минут.")
-    await state.clear()
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"approve_{user.id}")]
+        ]
+    )
+
+    await bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption, reply_markup=keyboard)
+    await message.answer("✅ Чек отправлен. Ожидайте подтверждения от администратора.")
+
+@dp.callback_query(F.data.startswith("approve_"))
+async def confirm_order(callback: types.CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+    await bot.send_message(chat_id=user_id, text="✅ Оплата подтверждена! Курьер уже в пути.")
+    await callback.answer("Пользователь уведомлён.")
 
 # Webhook
 async def handle_webhook(request):
