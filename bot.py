@@ -71,17 +71,37 @@ async def photo_step(message: types.Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     await state.update_data(photo=photo_id)
 
-    # Время
-    times = [f"{h}:00" for h in range(8, 21)]
+    # Выбор времени с учётом занятости
+    time_slots = [f"{h}:00" for h in range(8, 21)]
+    slot_limit = 15
+    slot_counts = {slot: 0 for slot in time_slots}
+
+    # Подсчёт существующих заказов
+    try:
+        with open("orders.csv", "r", encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+            for row in rows[1:]:
+                if row and row[4] in slot_counts:
+                    slot_counts[row[4]] += 1
+    except FileNotFoundError:
+        pass
+
+    # Оставляем только незаполненные слоты
+    available_slots = [slot for slot, count in slot_counts.items() if count < slot_limit]
+
+    if not available_slots:
+        await message.answer("❌ Все временные интервалы на сегодня заняты. Попробуйте позже.")
+        await state.clear()
+        return
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=time, callback_data=f"time_{time}")]
-            for time in times
+            [InlineKeyboardButton(text=slot, callback_data=f"time_{slot}")]
+            for slot in available_slots
         ]
     )
     await message.answer("🕐 Выберите удобное время уборки (по МСК):", reply_markup=keyboard)
     await state.set_state(OrderStates.waiting_for_time)
-
 @dp.callback_query(F.data.startswith("time_"))
 async def choose_time(callback: types.CallbackQuery, state: FSMContext):
     time_chosen = callback.data.split("_", 1)[1]
