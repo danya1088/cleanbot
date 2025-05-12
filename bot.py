@@ -39,11 +39,12 @@ class OrderStates(StatesGroup):
 async def start(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")]
+            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
+            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya_1088")]
         ]
     )
     await message.answer(
-        "Добро пожаловать в сервис уборки мусора! ♻️\n\nНажмите кнопку ниже, чтобы оставить заявку.",
+        "Добро пожаловать в сервис уборки мусора! ♻️\n\nНажмите кнопку ниже, чтобы оставить заявку или связаться с администратором.",
         reply_markup=keyboard
     )
     await state.clear()
@@ -153,7 +154,8 @@ async def payment_proof_step(message: types.Message, state: FSMContext):
             inline_keyboard=[
                 [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_payment_{order_id}")],
                 [InlineKeyboardButton("✅ Мусор забрали", callback_data=f"status_taken_{order_id}")],
-                [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")]
+                [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")],
+                [InlineKeyboardButton("📞 Связаться с администратором", url="https://t.me/danya_1088")]
             ]
         )
     )
