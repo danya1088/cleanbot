@@ -181,6 +181,11 @@ async def choose_date(callback: types.CallbackQuery, state: FSMContext):
     
     await callback.message.answer("Выберите удобное время уборки:", reply_markup=keyboard)
 
+@dp.callback_query(F.data.startswith("time_"))
+async def choose_time(callback: types.CallbackQuery, state: FSMContext):
+    chosen_time = callback.data.split("_", 1)[1]
+    await state.update_data(time=chosen_time)
+    
     await callback.message.answer(
         "📍 Укажите точный адрес, включая:\n"
         "- улицу\n- дом, корпус\n- подъезд\n- код домофона\n- этаж\n- квартиру"
