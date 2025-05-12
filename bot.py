@@ -37,24 +37,71 @@ class OrderStates(StatesGroup):
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
-            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
-        ]
-    )
-    await message.answer(
-        "Добро пожаловать в сервис уборки мусора! ♻️\n\nНажмите кнопку ниже, чтобы оставить заявку или связаться с администратором.",
-        reply_markup=keyboard
-    )
+    user_id = message.from_user.id
+    user_data = await state.get_data()
+    
+    # Проверяем, является ли пользователь новым (нет данных в state)
+    if not user_data.get("is_old_user"):
+        await state.update_data(is_old_user=True)
+        await show_instruction(message)
+    else:
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
+                [InlineKeyboardButton(text="📘 Показать инструкцию", callback_data="show_instruction")],
+                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
+            ]
+        )
+        await message.answer(
+            "Добро пожаловать в сервис уборки мусора! ♻️\n\nВыберите действие:",
+            reply_markup=keyboard
+        )
     await state.clear()
 
-@dp.callback_query(F.data == "new_order")
-async def new_order(callback: types.CallbackQuery, state: FSMContext):
+
+async def show_instruction(message: types.Message):
+    instruction_text = (
+        "🚀 Как мы работаем:\n\n"
+        "1️⃣ Вы оставляете заявку через наш бот:\n"
+        "- Нажимаете кнопку '📝 Оставить заявку'.\n"
+        "- Выбираете тип мусора (один пакет, несколько пакетов или крупный мусор).\n\n"
+        "2️⃣ Указываете точный адрес:\n"
+        "- Улица, дом, корпус.\n"
+        "- Подъезд, этаж, квартира.\n"
+        "- Код от домофона, если есть.\n\n"
+        "3️⃣ Отправляете фото мусора:\n"
+        "- Фото обязательно для любого типа мусора.\n"
+        "- Для крупного или строительного мусора (мебель, техника, строительные отходы) — максимальный общий вес мусора до 30 кг.\n"
+        "- Для оформления заявки на крупный мусор обязательна связь с администратором.\n\n"
+        "4️⃣ Оплачиваете услугу:\n"
+        "- Мы укажем вам номер телефона для перевода.\n"
+        "- Переведите сумму и отправьте фото чека.\n\n"
+        "5️⃣ Курьер забирает и выбрасывает мусор:\n"
+        "- Курьер заберёт мусор в указанное время.\n"
+        "- Вы получите уведомления: ✅ 'Мусор забран.' и 🚮 'Мусор выброшен.'"
+    )
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=name, callback_data=f"choose_{name}")]
-            for name in products
+            [InlineKeyboardButton(text="Продолжить", callback_data="start_order")]
+        ]
+    )
+
+    await message.answer(instruction_text, reply_markup=keyboard)
+
+
+@dp.callback_query(F.data == "show_instruction")
+async def show_instruction_callback(callback: types.CallbackQuery):
+    await show_instruction(callback.message)
+
+
+@dp.callback_query(F.data == "start_order")
+async def start_order(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🗑 Один пакет", callback_data="choose_Один пакет")],
+            [InlineKeyboardButton(text="🧹 2-3 пакета", callback_data="choose_2-3 пакета")],
+            [InlineKeyboardButton(text="🪵 Крупный или строительный мусор", callback_data="choose_Крупный мусор")]
         ]
     )
     await callback.message.answer("Выберите услугу:", reply_markup=keyboard)
