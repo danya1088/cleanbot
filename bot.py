@@ -127,44 +127,46 @@ async def payment_proof_step(message: types.Message, state: FSMContext):
     user = message.from_user
 
     order_id = datetime.now().strftime("%Y%m%d%H%M%S")
-    row = {
-        "order_id": order_id,
-        "user": f"@{user.username or user.first_name}",
-        "product": data["product"],
-        "address": data["address"],
-        "time": data["time"]
-    }
+    data["order_id"] = order_id
+    data["status"] = "Ожидает подтверждения оплаты"
 
-    with open("orders.csv", "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-        if f.tell() == 0:
-            writer.writeheader()
-        writer.writerow(row)
-
-    caption = (
-        f"🧾 ПОДТВЕРЖДЕНИЕ ОПЛАТЫ\n"
-        f"Номер заказа: {order_id}\n"
-        f"Услуга: {data['product']}\n"
-        f"Адрес: {data['address']}\n"
-        f"Время: {data['time']}\n"
-        f"Пользователь: @{user.username or user.first_name}\n"
-        f"Подтвердите выполнение заказа?"
+    await bot.send_photo(
+        chat_id=GROUP_CHAT_ID,
+        photo=message.photo[-1].file_id,
+        caption=(
+            f"🧾 Новый заказ #{order_id}\n"
+            f"Услуга: {data['product']}\n"
+            f"Адрес: {data['address']}\n\n"
+            "Подтвердите выполнение:"
+        ),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_payment_{order_id}")],
+                [InlineKeyboardButton("✅ Мусор забрали", callback_data=f"status_taken_{order_id}")],
+                [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")]
+            ]
+        )
     )
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"approve_{user.id}")]
-        ]
-    )
+    await message.answer("✅ Заказ оформлен! Ожидайте, курьер заберет мусор в ближайшее время.")
 
-    await bot.send_photo(chat_id=GROUP_CHAT_ID, photo=message.photo[-1].file_id, caption=caption, reply_markup=keyboard)
-    await message.answer("✅ Чек отправлен. Ожидайте подтверждения администратора.")
+@dp.callback_query(F.data.startswith("confirm_payment_"))
+async def confirm_payment(callback: types.CallbackQuery):
+    order_id = callback.data.split("_")[2]
+    await callback.message.edit_caption(f"✅ Оплата подтверждена (заказ #{order_id})")
+    await bot.send_message(callback.from_user.id, f"✅ Оплата подтверждена! Ваш заказ #{order_id} принят.")
 
-@dp.callback_query(F.data.startswith("approve_"))
-async def confirm_order(callback: types.CallbackQuery):
-    user_id = int(callback.data.split("_")[1])
-    await bot.send_message(chat_id=user_id, text="✅ Оплата подтверждена! Курьер приедет в указанное время.")
-    await callback.answer("Пользователь уведомлён.")
+@dp.callback_query(F.data.startswith("status_taken_"))
+async def status_taken(callback: types.CallbackQuery):
+    order_id = callback.data.split("_")[2]
+    await callback.message.edit_caption(f"✅ Мусор забран (заказ #{order_id})")
+    await bot.send_message(callback.from_user.id, f"✅ Мусор забран по вашему заказу #{order_id}.")
+
+@dp.callback_query(F.data.startswith("status_disposed_"))
+async def status_disposed(callback: types.CallbackQuery):
+    order_id = callback.data.split("_")[2]
+    await callback.message.edit_caption(f"🚮 Мусор выброшен (заказ #{order_id})")
+    await bot.send_message(callback.from_user.id, f"🚮 Мусор выброшен по вашему заказу #{order_id}.")
 
 # Ежедневный отчёт
 async def send_daily_report():
