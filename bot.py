@@ -71,7 +71,12 @@ async def photo_step(message: types.Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     await state.update_data(photo=photo_id)
 
-    time_slots = [f"{h}:00" for h in range(8, 21)]
+    # Текущее время по МСК
+    now = datetime.now(pytz.timezone("Europe/Moscow"))
+    current_hour = now.hour
+
+    # Временные слоты с фильтрацией по текущему времени
+    time_slots = [f"{h}:00" for h in range(max(8, current_hour + 1), 21)]
     slot_limit = 15
     slot_counts = {slot: 0 for slot in time_slots}
 
