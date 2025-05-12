@@ -39,14 +39,24 @@ class OrderStates(StatesGroup):
 async def start(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")]
+        ]
+    )
+    await message.answer(
+        "Добро пожаловать в сервис уборки мусора! ♻️\n\nНажмите кнопку ниже, чтобы оставить заявку.",
+        reply_markup=keyboard
+    )
+    await state.clear()
+
+@dp.callback_query(F.data == "new_order")
+async def new_order(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
             [InlineKeyboardButton(text=name, callback_data=f"choose_{name}")]
             for name in products
         ]
     )
-    await message.answer(
-        "Приветствуем в сервисе уборки мусора! ♻️\n\nВыберите услугу:",
-        reply_markup=keyboard
-    )
+    await callback.message.answer("Выберите услугу:", reply_markup=keyboard)
     await state.clear()
 
 @dp.callback_query(F.data.startswith("choose_"))
