@@ -1,62 +1,40 @@
-import os
-import logging
-import csv
-from datetime import datetime
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ContentType
-from aiogram.filters import CommandStart
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram import types, Bot, Dispatcher, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiohttp import web
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import pytz
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from datetime import datetime
+import os
 
-logging.basicConfig(level=logging.INFO)
-
-TOKEN = os.getenv("TOKEN")
-GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-PHONE_NUMBER = os.getenv("PHONE_NUMBER")
-BANK_NAME = os.getenv("BANK_NAME")
-
-bot = Bot(token=TOKEN)
+bot = Bot(token=os.getenv("TOKEN"))
 dp = Dispatcher()
 
-products = {
-    "🗑 Один пакет мусора": 100,
-    "🧹 2-3 пакета мусора": 200,
-    "🪵 Крупный мусор": 400
-}
-
 class OrderStates(StatesGroup):
+    choosing_service = State()
     waiting_for_address = State()
     waiting_for_photo = State()
-    waiting_for_time = State()
-    waiting_for_payment_proof = State()
 
-@dp.message_handler(commands=['start'])
-async def start_command(message: types.Message, state: FSMContext):
+@dp.message(CommandStart())
+async def start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = await state.get_data()
     
-    # Проверяем, показывалась ли уже инструкция этому пользователю
-    if not user_data.get("instruction_shown"):
+    # Проверяем, является ли пользователь новым (нет данных в state)
+    if not user_data.get("is_old_user"):
+        await state.update_data(is_old_user=True)
         await show_instruction(message)
-        await state.update_data(instruction_shown=True)
     else:
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
-                [InlineKeyboardButton(text="📄 Показать инструкцию", callback_data="show_instruction")],
-                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
+                [InlineKeyboardButton(text="📘 Показать инструкцию", callback_data="show_instruction")],
+                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
             ]
         )
-        await message.answer("Добро пожаловать! Выберите действие:", reply_markup=keyboard)
-
-@dp.callback_query(F.data == "show_instruction")
-async def show_instruction_callback(callback: types.CallbackQuery):
-    await show_instruction(callback.message)
+        await message.answer(
+            "Добро пожаловать в сервис уборки мусора! ♻️\n\nВыберите действие:",
+            reply_markup=keyboard
+        )
+    await state.clear()
 
 async def show_instruction(message: types.Message):
     instruction_text = (
@@ -86,16 +64,17 @@ async def show_instruction(message: types.Message):
         "- Вы получите уведомления: ✅ 'Мусор забран.' и 🚮 'Мусор выброшен.'"
     )
 
-    await message.answer(instruction_text, reply_markup=InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")]
+            [InlineKeyboardButton(text="Продолжить", callback_data="start_order")]
         ]
-    ))
+    )
+
+    await message.answer(instruction_text, reply_markup=keyboard)
 
 @dp.callback_query(F.data == "show_instruction")
 async def show_instruction_callback(callback: types.CallbackQuery):
     await show_instruction(callback.message)
-
 
 @dp.callback_query(F.data == "start_order")
 async def start_order(callback: types.CallbackQuery, state: FSMContext):
