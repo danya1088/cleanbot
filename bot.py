@@ -7,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ContentType
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.filters import Command  # Исправлено, используем Command вместо CommandStart
 from aiohttp import web
 import pytz
 
@@ -28,12 +29,12 @@ class OrderStates(StatesGroup):
     waiting_for_payment_proof = State()
 
 products = {
-    "🗑 Один пакет мусора": 100,
-    "🧹 2-3 пакета мусора": 200,
-    "🪵 Крупный мусор": 400
+    "📦 Один пакет мусора": 100,
+    "📦 2-3 пакета мусора": 200,
+    "📦 Крупный мусор": 400
 }
 
-@dp.message(CommandStart())
+@dp.message(Command("start"))  # Исправлено: Command("start") вместо CommandStart
 async def start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = await state.get_data()
@@ -53,7 +54,6 @@ async def start(message: types.Message, state: FSMContext):
         await message.answer(
             "Добро пожаловать в сервис уборки мусора! ♻️\n\nВыберите действие:",
             reply_markup=keyboard
-        )
     await state.clear()
 
 
