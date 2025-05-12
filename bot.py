@@ -40,7 +40,7 @@ async def start(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
-            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya_1088")]
+            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
         ]
     )
     await message.answer(
@@ -155,7 +155,7 @@ async def payment_proof_step(message: types.Message, state: FSMContext):
                 [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_payment_{order_id}")],
                 [InlineKeyboardButton("✅ Мусор забрали", callback_data=f"status_taken_{order_id}")],
                 [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")],
-                [InlineKeyboardButton("📞 Связаться с администратором", url="https://t.me/danya_1088")]
+                [InlineKeyboardButton("📞 Связаться с администратором", url="https://t.me/danya1088")]
             ]
         )
     )
