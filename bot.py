@@ -56,6 +56,7 @@ async def start(message: types.Message, state: FSMContext):
         )
     await state.clear()
 
+
 async def show_instruction(message: types.Message):
     instruction_text = (
         "🚀 Как мы работаем:\n\n"
@@ -91,6 +92,25 @@ async def show_instruction(message: types.Message):
     )
 
     await message.answer(instruction_text, reply_markup=keyboard)
+
+
+@dp.callback_query(F.data == "show_instruction")
+async def show_instruction_callback(callback: types.CallbackQuery):
+    await show_instruction(callback.message)
+
+
+@dp.callback_query(F.data == "start_order")
+async def start_order(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🗑 Один пакет", callback_data="choose_Один пакет")],
+            [InlineKeyboardButton(text="🧹 2-3 пакета", callback_data="choose_2-3 пакета")],
+            [InlineKeyboardButton(text="🪵 Крупный или строительный мусор", callback_data="choose_Крупный мусор")]
+        ]
+    )
+    await callback.message.answer("Выберите услугу:", reply_markup=keyboard)
+    await state.clear()
+
 
 @dp.callback_query(F.data == "show_instruction")
 async def show_instruction_callback(callback: types.CallbackQuery):
