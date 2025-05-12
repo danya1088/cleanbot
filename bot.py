@@ -47,15 +47,14 @@ async def start(message: types.Message, state: FSMContext):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
-                [InlineKeyboardButton(text="📘 Показать инструкцию", callback_data="show_instruction")],
+                [InlineKeyboardButton(text="📄 Показать инструкцию", callback_data="show_instruction")],
                 [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
             ]
         )
         await message.answer(
-            "Добро пожаловать в сервис уборки мусора! ♻️\n\nВыберите действие:",
+            "👋 Добро пожаловать в сервис уборки мусора! \n\nВыберите действие:",
             reply_markup=keyboard
-    await state.clear()
-
+        )
 
 async def show_instruction(message: types.Message):
     instruction_text = (
