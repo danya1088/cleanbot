@@ -35,28 +35,28 @@ class OrderStates(StatesGroup):
     waiting_for_time = State()
     waiting_for_payment_proof = State()
 
-@dp.message(CommandStart())
-async def start(message: types.Message, state: FSMContext):
+@dp.message_handler(commands=['start'])
+async def start_command(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = await state.get_data()
     
-    # Проверяем, является ли пользователь новым (нет данных в state)
-    if not user_data.get("is_old_user"):
-        await state.update_data(is_old_user=True)
+    # Проверяем, показывалась ли уже инструкция этому пользователю
+    if not user_data.get("instruction_shown"):
         await show_instruction(message)
+        await state.update_data(instruction_shown=True)
     else:
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
-                [InlineKeyboardButton(text="📘 Показать инструкцию", callback_data="show_instruction")],
+                [InlineKeyboardButton(text="📄 Показать инструкцию", callback_data="show_instruction")],
                 [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
             ]
         )
-        await message.answer(
-            "Добро пожаловать в сервис уборки мусора! ♻️\n\nВыберите действие:",
-            reply_markup=keyboard
-        )
-    await state.clear()
+        await message.answer("Добро пожаловать! Выберите действие:", reply_markup=keyboard)
+
+@dp.callback_query(F.data == "show_instruction")
+async def show_instruction_callback(callback: types.CallbackQuery):
+    await show_instruction(callback.message)
 
 async def show_instruction(message: types.Message):
     instruction_text = (
@@ -86,22 +86,11 @@ async def show_instruction(message: types.Message):
         "- Вы получите уведомления: ✅ 'Мусор забран.' и 🚮 'Мусор выброшен.'"
     )
 
-    keyboard = InlineKeyboardMarkup(
+    await message.answer(instruction_text, reply_markup=InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Продолжить", callback_data="start_order")]
+            [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")]
         ]
-    )
-
-    await message.answer(instruction_text, reply_markup=keyboard)
-
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Продолжить", callback_data="start_order")]
-        ]
-    )
-
-    await message.answer(instruction_text, reply_markup=keyboard)
-
+    ))
 
 @dp.callback_query(F.data == "show_instruction")
 async def show_instruction_callback(callback: types.CallbackQuery):
@@ -164,6 +153,7 @@ async def choose_date(callback: types.CallbackQuery, state: FSMContext):
     
     now = datetime.now(pytz.timezone("Europe/Moscow"))
     today = now.strftime("%d.%m.%Y")
+    tomorrow = (now + timedelta(days=1)).strftime("%d.%m.%Y")
 
     # Временные интервалы с 8:00 до 21:00
     time_slots = [f"{h}:00" for h in range(8, 21)]
@@ -179,11 +169,13 @@ async def choose_date(callback: types.CallbackQuery, state: FSMContext):
     except FileNotFoundError:
         pass
 
-    available_slots = [slot for slot, count in slot_counts.items() if count < slot_limit]
+    available_slots = [
+        slot for slot, count in slot_counts.items() if count < slot_limit
+    ]
 
     if not available_slots:
         await callback.message.answer(
-            "❌ Все временные интервалы на выбранную дату заняты. Попробуйте позже."
+            f"❌ Все временные интервалы на {chosen_date} заняты. Попробуйте другую дату."
         )
         await state.clear()
         return
