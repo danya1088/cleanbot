@@ -1,17 +1,37 @@
-from aiogram import types, Bot, Dispatcher, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from datetime import datetime
 import os
+import logging
+import csv
+from datetime import datetime
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.enums import ContentType
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from aiohttp import web
+import pytz
 
-bot = Bot(token=os.getenv("TOKEN"))
+logging.basicConfig(level=logging.INFO)
+
+TOKEN = os.getenv("TOKEN")
+GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+PHONE_NUMBER = os.getenv("PHONE_NUMBER")
+BANK_NAME = os.getenv("BANK_NAME")
+
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 class OrderStates(StatesGroup):
-    choosing_service = State()
     waiting_for_address = State()
     waiting_for_photo = State()
+    waiting_for_time = State()
+    waiting_for_payment_proof = State()
+
+products = {
+    "🗑 Один пакет мусора": 100,
+    "🧹 2-3 пакета мусора": 200,
+    "🪵 Крупный мусор": 400
+}
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
