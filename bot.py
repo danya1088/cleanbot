@@ -155,27 +155,44 @@ async def choose_transfer(callback: types.CallbackQuery, state: FSMContext):
 
 from datetime import datetime, timedelta
 import pytz
+import csv
 
 @dp.callback_query(F.data.startswith("date_"))
 async def choose_date(callback: types.CallbackQuery, state: FSMContext):
     chosen_date = callback.data.split("_", 1)[1]
     await state.update_data(date=chosen_date)
     
-    # Проверяем выбранную дату (сегодня или завтра)
     now = datetime.now(pytz.timezone("Europe/Moscow"))
-    if chosen_date == now.strftime("%d.%m.%Y"):
-        # Если сегодня - временные слоты только после текущего времени
-        current_hour = now.hour
-        time_slots = [f"{h}:00" for h in range(max(8, current_hour + 1), 21)]
-    else:
-        # Если завтра - все слоты доступны
-        time_slots = [f"{h}:00" for h in range(8, 21)]
+    today = now.strftime("%d.%m.%Y")
+
+    # Временные интервалы с 8:00 до 21:00
+    time_slots = [f"{h}:00" for h in range(8, 21)]
+    slot_limit = 15
+    slot_counts = {slot: 0 for slot in time_slots}
+
+    try:
+        with open("orders.csv", "r", encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+            for row in rows[1:]:
+                if row and row[4] in slot_counts and row[3] == chosen_date:
+                    slot_counts[row[4]] += 1
+    except FileNotFoundError:
+        pass
+
+    available_slots = [slot for slot, count in slot_counts.items() if count < slot_limit]
+
+    if not available_slots:
+        await callback.message.answer(
+            "❌ Все временные интервалы на выбранную дату заняты. Попробуйте позже."
+        )
+        await state.clear()
+        return
 
     # Создание кнопок выбора времени
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=slot, callback_data=f"time_{slot}")]
-            for slot in time_slots
+            for slot in available_slots
         ]
     )
     
