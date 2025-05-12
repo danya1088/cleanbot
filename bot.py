@@ -58,28 +58,41 @@ async def start(message: types.Message, state: FSMContext):
         )
     await state.clear()
 
-
 async def show_instruction(message: types.Message):
     instruction_text = (
         "🚀 Как мы работаем:\n\n"
         "1️⃣ Вы оставляете заявку через наш бот:\n"
         "- Нажимаете кнопку '📝 Оставить заявку'.\n"
         "- Выбираете тип мусора (один пакет, несколько пакетов или крупный мусор).\n\n"
-        "2️⃣ Указываете точный адрес:\n"
+        "2️⃣ Вы выбираете способ передачи мусора:\n"
+        "- ✅ Мусор выставлен за дверь — курьер просто заберёт его.\n"
+        "- 🚪 Курьер поднимется и заберёт лично — клиент должен быть дома.\n\n"
+        "3️⃣ Вы выбираете дату выполнения заявки:\n"
+        "- ✅ Сегодня (текущая дата) — курьер заберёт мусор в ближайшее время.\n"
+        "- 📅 Завтра (следующая дата) — заявка будет выполнена на следующий день.\n\n"
+        "4️⃣ Указываете точный адрес:\n"
         "- Улица, дом, корпус.\n"
         "- Подъезд, этаж, квартира.\n"
         "- Код от домофона, если есть.\n\n"
-        "3️⃣ Отправляете фото мусора:\n"
+        "5️⃣ Отправляете фото мусора:\n"
         "- Фото обязательно для любого типа мусора.\n"
-        "- Для крупного или строительного мусора (мебель, техника, строительные отходы) — максимальный общий вес мусора до 30 кг.\n"
+        "- Для крупного или строительного мусора — максимальный общий вес до 30 кг.\n"
         "- Для оформления заявки на крупный мусор обязательна связь с администратором.\n\n"
-        "4️⃣ Оплачиваете услугу:\n"
+        "6️⃣ Оплачиваете услугу:\n"
         "- Мы укажем вам номер телефона для перевода.\n"
         "- Переведите сумму и отправьте фото чека.\n\n"
-        "5️⃣ Курьер забирает и выбрасывает мусор:\n"
+        "7️⃣ Курьер забирает и выбрасывает мусор:\n"
         "- Курьер заберёт мусор в указанное время.\n"
         "- Вы получите уведомления: ✅ 'Мусор забран.' и 🚮 'Мусор выброшен.'"
     )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Продолжить", callback_data="start_order")]
+        ]
+    )
+
+    await message.answer(instruction_text, reply_markup=keyboard)
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -107,16 +120,49 @@ async def start_order(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("Выберите услугу:", reply_markup=keyboard)
     await state.clear()
 
+from datetime import datetime, timedelta
+
 @dp.callback_query(F.data.startswith("choose_"))
 async def choose_product(callback: types.CallbackQuery, state: FSMContext):
     product_name = callback.data.split("_", 1)[1]
     await state.update_data(product=product_name)
+    
+    # Способ передачи мусора
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Мусор выставлен за дверь", callback_data="transfer_door")],
+            [InlineKeyboardButton(text="🚪 Курьер поднимется и заберёт", callback_data="transfer_pickup")]
+        ]
+    )
+    await callback.message.answer("Выберите способ передачи мусора:", reply_markup=keyboard)
+
+@dp.callback_query(F.data.startswith("transfer_"))
+async def choose_transfer(callback: types.CallbackQuery, state: FSMContext):
+    transfer_method = "Выставлен за дверь" if "door" in callback.data else "Курьер поднимется"
+    await state.update_data(transfer=transfer_method)
+    
+    # Выбор даты заявки
+    today = datetime.now().strftime("%d.%m.%Y")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
+            [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
+        ]
+    )
+    await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
+
+@dp.callback_query(F.data.startswith("date_"))
+async def choose_date(callback: types.CallbackQuery, state: FSMContext):
+    chosen_date = callback.data.split("_", 1)[1]
+    await state.update_data(date=chosen_date)
+    
     await callback.message.answer(
         "📍 Укажите точный адрес, включая:\n"
         "- улицу\n- дом, корпус\n- подъезд\n- код домофона\n- этаж\n- квартиру"
     )
     await state.set_state(OrderStates.waiting_for_address)
-    await callback.answer()
 
 @dp.message(OrderStates.waiting_for_address)
 async def address_step(message: types.Message, state: FSMContext):
@@ -194,6 +240,8 @@ async def payment_proof_step(message: types.Message, state: FSMContext):
         caption=(
             f"🧾 Новый заказ #{order_id}\n"
             f"Услуга: {data['product']}\n"
+            f"Способ передачи: {data.get('transfer', 'Не указан')}\n"
+            f"Дата выполнения: {data.get('date', 'Сегодня')}\n"
             f"Адрес: {data['address']}\n\n"
             "Подтвердите выполнение:"
         ),
@@ -201,7 +249,7 @@ async def payment_proof_step(message: types.Message, state: FSMContext):
             inline_keyboard=[
                 [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_payment_{order_id}")],
                 [InlineKeyboardButton("✅ Мусор забрали", callback_data=f"status_taken_{order_id}")],
-                [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")],
+                [InlineKeyboardButton("🚮 Мусор выбросили", callback_data=f"status_disposed_{order_id}")]
                 [InlineKeyboardButton("📞 Связаться с администратором", url="https://t.me/danya1088")]
             ]
         )
