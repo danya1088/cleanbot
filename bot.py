@@ -153,11 +153,34 @@ async def choose_transfer(callback: types.CallbackQuery, state: FSMContext):
     )
     await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
 
+from datetime import datetime, timedelta
+import pytz
+
 @dp.callback_query(F.data.startswith("date_"))
 async def choose_date(callback: types.CallbackQuery, state: FSMContext):
     chosen_date = callback.data.split("_", 1)[1]
     await state.update_data(date=chosen_date)
     
+    # Проверяем выбранную дату (сегодня или завтра)
+    now = datetime.now(pytz.timezone("Europe/Moscow"))
+    if chosen_date == now.strftime("%d.%m.%Y"):
+        # Если сегодня - временные слоты только после текущего времени
+        current_hour = now.hour
+        time_slots = [f"{h}:00" for h in range(max(8, current_hour + 1), 21)]
+    else:
+        # Если завтра - все слоты доступны
+        time_slots = [f"{h}:00" for h in range(8, 21)]
+
+    # Создание кнопок выбора времени
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=slot, callback_data=f"time_{slot}")]
+            for slot in time_slots
+        ]
+    )
+    
+    await callback.message.answer("Выберите удобное время уборки:", reply_markup=keyboard)
+
     await callback.message.answer(
         "📍 Укажите точный адрес, включая:\n"
         "- улицу\n- дом, корпус\n- подъезд\n- код домофона\n- этаж\n- квартиру"
