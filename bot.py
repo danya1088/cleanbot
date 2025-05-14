@@ -3,12 +3,13 @@ import logging
 import csv
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ContentType
+from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.filters import Command  # Исправлено, используем Command вместо CommandStart
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +22,12 @@ BANK_NAME = os.getenv("BANK_NAME")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+products = {
+    "🗑 Один пакет мусора": 100,
+    "🧹 2-3 пакета мусора": 200,
+    "🪵 Крупный мусор": 400
+}
 
 class OrderStates(StatesGroup):
     waiting_for_address = State()
