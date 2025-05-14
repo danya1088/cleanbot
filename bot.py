@@ -223,7 +223,14 @@ async def get_payment_proof(message: types.Message, state: FSMContext):
     await bot.send_message(GROUP_CHAT_ID, f"📥 Новая заявка:\n\n<code>{product}</code>\nДата: {chosen_date} {time_chosen}\nАдрес: {address}", parse_mode="HTML")
     await state.clear()
 
-    await message.answer("✅ Спасибо! Оплата получена. Курьер в скором времени заберёт мусор.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]])). Курьер в скором времени заберёт мусор.")
+    await message.answer(
+    "✅ Спасибо! Оплата получена. Курьер в скором времени заберёт мусор.",
+    reply_markup=InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
+        ]
+    )
+)
 
     # Отправляем администратору подтверждение и кнопки управления статусом
     status_keyboard = InlineKeyboardMarkup(inline_keyboard=[
