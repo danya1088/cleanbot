@@ -191,7 +191,7 @@ async def photo_step(message: types.Message, state: FSMContext):
     if product == "🔹 Крупный мусор":
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
+                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
             ]
         )
         await message.answer(
@@ -200,13 +200,12 @@ async def photo_step(message: types.Message, state: FSMContext):
         )
 
     price = products[product]
-    await message.answer(
-        f"📦 Оплата: <b>{price}</b> руб.
-Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n\n"
-        "📌 После оплаты отправьте фото чека для подтверждения."
-    )
-    await state.set_state(OrderStates.waiting_for_payment_proof)
-
+await message.answer(
+    f"🧾 Оплата: <b>{price}</b> руб.\n"
+    f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n\n"
+    "💬 После оплаты отправьте фото чека для подтверждения.",
+    parse_mode="HTML"
+)
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
 async def payment_proof(message: types.Message, state: FSMContext):
