@@ -169,12 +169,14 @@ caption = f"""🆕 Новый заказ:
 📍 Адрес: {data.get('address')}
 💳 Оплата подтверждена"""
 
-    await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
-    await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
-    await state.clear()
+await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
+await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
+await state.clear()
+
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
