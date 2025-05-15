@@ -1,7 +1,3 @@
-import os
-import logging
-import csv
-from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, F, Router, types
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -12,6 +8,7 @@ from aiogram.client.session.middlewares.request_logging import logger_middleware
 from datetime import datetime, timedelta
 import asyncio
 import logging
+logging.basicConfig(level=logging.INFO)
 import csv
 import os
 import pytz
@@ -191,7 +188,7 @@ async def photo_step(message: types.Message, state: FSMContext):
     if product == "🔹 Крупный мусор":
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
+                [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/")]
             ]
         )
         await message.answer(
