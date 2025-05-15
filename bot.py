@@ -3,7 +3,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ParseMode
-from aiogram.client.session.middlewares.request_logging import logger_middleware
 
 from datetime import datetime, timedelta
 import asyncio
