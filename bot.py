@@ -166,21 +166,18 @@ async def payment_proof(message: Message, state: FSMContext):
     proof_id = message.photo[-1].file_id
     data = await state.get_data()
     caption = (
-        f"📦 Новый заказ:
-"
-        f"🧾 Услуга: {data.get('product')}
-"
-        f"📅 Дата: {data.get('date')}
-"
-        f"⏰ Время: {data.get('time')}
-"
-        f"📍 Адрес: {data.get('address')}
-"
-        f"💳 Оплата подтверждена"
-    )
+    f"📦 Новый заказ:\n"
+    f"🛍 Услуга: {data.get('product')}\n"
+    f"📅 Дата: {data.get('date')}\n"
+    f"⏰ Время: {data.get('time')}\n"
+    f"📍 Адрес: {data.get('address')}\n"
+    f"💳 Оплата подтверждена"
+)
+
     await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
     await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
     await state.clear()
+
 
 # Webhook запуск
 async def on_startup(app):
