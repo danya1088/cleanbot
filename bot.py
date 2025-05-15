@@ -248,7 +248,13 @@ async def status_disposed(callback: CallbackQuery):
 # Планировщик для ежедневного отчета
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 scheduler = AsyncIOScheduler()
-scheduler.start()
+async def main():
+    scheduler.start()
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
 
 @scheduler.scheduled_job("cron", hour=21, minute=30)
 async def send_daily_report():
