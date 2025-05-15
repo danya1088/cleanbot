@@ -162,16 +162,20 @@ async def photo_step(message: Message, state: FSMContext):
 async def payment_proof(message: Message, state: FSMContext):
     proof_id = message.photo[-1].file_id
     data = await state.get_data()
-caption = f"""🆕 Новый заказ:
-📦 Услуга: {data.get('product')}
-📅 Дата: {data.get('date')}
-⏰ Время: {data.get('time')}
-📍 Адрес: {data.get('address')}
-💳 Оплата подтверждена"""
 
-await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
-await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
-await state.clear()
+    caption = (
+        f"📦 Новый заказ:\n"
+        f"🧾 Услуга: {data.get('product')}\n"
+        f"📅 Дата: {data.get('date')}\n"
+        f"⏰ Время: {data.get('time')}\n"
+        f"📍 Адрес: {data.get('address')}\n"
+        f"💳 Оплата подтверждена"
+    )
+
+    await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
+    await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
+    await state.clear()
+
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
