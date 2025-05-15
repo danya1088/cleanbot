@@ -253,7 +253,29 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    import asyncio
+import asyncio
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiogram import Bot, Dispatcher
+
+# Ваши переменные (у тебя они уже есть выше по коду)
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+# Планировщик задач
+scheduler = AsyncIOScheduler()
+
+async def main():
+    # Удалить активный webhook (если ранее бот работал через webhook)
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    # Запустить планировщик задач (например, для отправки отчёта в 21:30)
+    scheduler.start()
+
+    # Старт long polling
+    await dp.start_polling(bot)
+
+# Запуск main()
+if __name__ == "__main__":
     asyncio.run(main())
 
 @scheduler.scheduled_job("cron", hour=21, minute=30)
