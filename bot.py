@@ -200,7 +200,7 @@ async def photo_step(message: types.Message, state: FSMContext):
         )
 
     price = products[product]
-await message.answer(
+    await message.answer(
     f"🧾 Оплата: <b>{price}</b> руб.\n"
     f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n\n"
     "💬 После оплаты отправьте фото чека для подтверждения.",
