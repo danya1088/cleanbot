@@ -46,7 +46,7 @@ async def start(message: Message, state: FSMContext):
     )
     await message.answer("📍 Добро пожаловать в сервис уборки мусора!")
 
-Выберите действие:", reply_markup=keyboard)
+    await message.answer("Выберите действие:", reply_markup=keyboard)
     await state.clear()
 
 @dp.callback_query(F.data == "new_order")
