@@ -152,14 +152,13 @@ async def photo_step(message: Message, state: FSMContext):
     data = await state.get_data()
     product = data.get("product")
     price = products.get(product, 0)
+
     await message.answer(
-        f"💳 Оплата: <b>{price}</b> руб.
-"
-        f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).
-"
-        "📸 После оплаты отправьте фото чека для подтверждения.",
-        parse_mode="HTML"
-    )
+    f"""💳 Оплата: <b>{price}</b> руб.
+Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).
+📸 После оплаты отправьте фото чека для подтверждения.""",
+    parse_mode="HTML"
+)
     await state.set_state(OrderStates.waiting_for_payment_proof)
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
