@@ -203,3 +203,26 @@ app.on_shutdown.append(on_shutdown)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     web.run_app(app, port=port)
+    
+from aiohttp import web
+
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+PORT = int(os.environ.get("PORT", 10000))
+
+async def webhook_handler(request):
+    update = await request.json()
+    telegram_update = types.Update(**update)
+    await dp.feed_update(bot, telegram_update)
+    return web.Response()
+
+async def main():
+    await bot.delete_webhook()
+    await bot.set_webhook(WEBHOOK_URL)
+
+    app = web.Application()
+    app.router.add_post("/webhook", webhook_handler)
+    web.run_app(app, port=PORT)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
