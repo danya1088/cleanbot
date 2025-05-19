@@ -46,9 +46,9 @@ async def start(message: Message, state: FSMContext):
             [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
         ]
     )
-    await message.answer("📍 Добро пожаловать в сервис уборки мусора!
+    await message.answer("📍 Добро пожаловать в сервис уборки мусора!")
 
-Выберите действие:", reply_markup=keyboard)
+    await message.answer("Выберите действие:", reply_markup=keyboard)
     await state.clear()
 
 @dp.callback_query(F.data == "new_order")
