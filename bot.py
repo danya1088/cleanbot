@@ -179,9 +179,6 @@ async def payment_proof(message: Message, state: FSMContext):
     await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
     await state.clear()
 
-if __name__ == "__main__":
-    asyncio.run(main())
-
 # Webhook запуск
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", 10000))
