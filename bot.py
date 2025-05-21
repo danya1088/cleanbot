@@ -263,8 +263,31 @@ app.on_startup.append(on_startup)
 @dp.callback_query(F.data.startswith("confirm_"))
 async def confirm_payment(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[1])
+
     await bot.send_message(user_id, "✅ Оплата подтверждена. Курьер в ближайшее время заберёт мусор.")
     await callback.answer("Оплата подтверждена.")
+
+    # Кнопки для статуса
+    status_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Мусор забрали", callback_data=f"pickedup_{user_id}")],
+            [InlineKeyboardButton(text="🚮 Мусор выброшен", callback_data=f"dumped_{user_id}")]
+        ]
+    )
+
+    await callback.message.answer("📦 Отслеживание заявки:", reply_markup=status_keyboard)
+
+@dp.callback_query(F.data.startswith("pickedup_"))
+async def picked_up(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+    await bot.send_message(user_id, "✅ Курьер забрал мусор.")
+    await callback.answer("Клиенту отправлено: мусор забрали.")
+
+@dp.callback_query(F.data.startswith("dumped_"))
+async def dumped(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+    await bot.send_message(user_id, "🚮 Мусор выброшен. Спасибо, что пользуетесь нашим сервисом!")
+    await callback.answer("Клиенту отправлено: мусор выброшен.")
 
 # 🚀 Запуск приложения
 if __name__ == "__main__":
