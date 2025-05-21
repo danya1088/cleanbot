@@ -34,7 +34,7 @@ class OrderStates(StatesGroup):
 products = {
     "🧺 Один пакет мусора": 100,
     "🗑️ 2-3 пакета мусора": 200,
-    "🛢 Крупный мусор": 400
+    "🛢 Крупный мусор": 500
 }
 
 @dp.message(Command("start"))
@@ -122,20 +122,8 @@ async def choose_transfer(callback: CallbackQuery, state: FSMContext):
     transfer_method = "Выставлен за дверь" if "door" in callback.data else "Курьер поднимется"
     await state.update_data(transfer=transfer_method)
 
-    today = datetime.now().strftime("%d.%m.%Y")
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
-
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
-            [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
-        ]
-    )
-
-    await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
-    await callback.answer()  # 🟢 Добавлено — обязательно!
-    await state.set_state(OrderStates.waiting_for_date)
-
+    # 🟢 Сначала подтверждаем callback
+    await callback.answer()
 
     today = datetime.now().strftime("%d.%m.%Y")
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
@@ -146,6 +134,8 @@ async def choose_transfer(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
         ]
     )
+
+    # 🔵 А уже потом отправляем сообщение
     await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
     await state.set_state(OrderStates.waiting_for_date)
 
