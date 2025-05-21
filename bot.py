@@ -127,6 +127,21 @@ async def choose_transfer(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
         ]
     )
+
+    await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
+    await callback.answer()  # 🟢 Добавлено — обязательно!
+    await state.set_state(OrderStates.waiting_for_date)
+
+
+    today = datetime.now().strftime("%d.%m.%Y")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
+            [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
+        ]
+    )
     await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
     await state.set_state(OrderStates.waiting_for_date)
 
