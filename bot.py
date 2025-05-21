@@ -138,16 +138,8 @@ async def get_large_description(message: Message, state: FSMContext):
         await message.answer("❗ Пожалуйста, опишите подробнее. Минимум 10 символов.")
         return
 
-    await state.update_data(large_description=text)
-
-    # Кнопка связи с админом
-    contact_admin = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
-        ]
-    )
-
-    await message.answer("✅ Описание сохранено.\n📷 Теперь отправьте минимум 2 фото крупного мусора.", reply_markup=contact_admin)
+    await state.update_data(large_description=text, photos=[])
+    await message.answer("✅ Описание сохранено.\n📷 Теперь отправьте минимум 2 фото крупного мусора.")
     await state.set_state(OrderStates.waiting_for_photo)
 
 @dp.callback_query(F.data.startswith("transfer_"))
@@ -236,24 +228,32 @@ async def photo_step(message: Message, state: FSMContext):
     photos.append(photo_id)
     await state.update_data(photos=photos)
 
-    # Если крупный мусор — минимум 2 фото и остановка на администраторе
     if product == "🛢 Крупный мусор":
         if len(photos) < 2:
             await message.answer(f"📷 Получено {len(photos)} фото. Добавьте ещё минимум {2 - len(photos)}.")
             return
 
-        await message.answer(
-            "📞 Для оформления заявки на крупный мусор необходимо связаться с администратором.",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
-                ]
-            )
+        desc = data.get("large_description", "—")
+        caption = (
+            f"🛢 <b>Заявка на крупный мусор</b>\n"
+            f"👤 Пользователь: @{message.from_user.username or 'Без ника'}\n"
+            f"📝 Описание: {desc}\n"
+            f"🕐 Заявка без автоматической оплаты — требуется ручная обработка."
         )
+
+        media = [types.InputMediaPhoto(media=pid) for pid in photos[:10]]
+        if media:
+            media[0].caption = caption
+            media[0].parse_mode = "HTML"
+            await bot.send_media_group(chat_id=GROUP_CHAT_ID, media=media)
+        else:
+            await bot.send_message(GROUP_CHAT_ID, caption, parse_mode="HTML")
+
+        await message.answer("📨 Заявка отправлена администратору. Ожидайте связи.")
         await state.clear()
         return
 
-    # Обычные заявки — сразу к оплате
+    # обычный порядок
     price = products.get(product, 0)
     await state.update_data(price=price)
 
