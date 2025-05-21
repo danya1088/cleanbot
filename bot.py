@@ -12,6 +12,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
@@ -195,15 +196,23 @@ async def photo_step(message: Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     await state.update_data(photo_id=photo_id)
     data = await state.get_data()
-    product = data.get("product")
+
+    product = data.get("product", "🧺 Один пакет мусора")
+    products = {
+        "🧺 Один пакет мусора": 100,
+        "🗑️ 2–3 пакета мусора": 200,
+        "🛢 Крупный мусор": 500
+    }
     price = products.get(product, 0)
 
+    await state.update_data(price=price)
+
     await message.answer(
-    f"""💳 Оплата: <b>{price}</b> руб.
-Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).
-📸 После оплаты отправьте фото чека для подтверждения.""",
-    parse_mode="HTML"
-)
+        f"💳 Оплата: <b>{price} ₽</b>\n"
+        f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
+        f"📸 После оплаты отправьте фото чека для подтверждения.",
+        parse_mode="HTML"
+    )
     await state.set_state(OrderStates.waiting_for_payment_proof)
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
@@ -217,11 +226,17 @@ async def payment_proof(message: Message, state: FSMContext):
         f"📅 Дата: {data.get('date')}\n"
         f"⏰ Время: {data.get('time')}\n"
         f"📍 Адрес: {data.get('address')}\n"
-        f"💳 Оплата подтверждена"
+        f"💳 Ожидает подтверждения"
     )
 
-    await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption)
-    await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data=f"confirm_{message.from_user.id}")]
+        ]
+    )
+
+    await bot.send_photo(GROUP_CHAT_ID, photo=proof_id, caption=caption, reply_markup=keyboard)
+    await message.answer("📨 Чек отправлен. Ожидайте подтверждения оплаты администратором.")
     await state.clear()
 
 # 📌 Настройки Webhook
@@ -244,6 +259,12 @@ async def on_startup(app):
 app = web.Application()
 app.router.add_post("/webhook", webhook_handler)
 app.on_startup.append(on_startup)
+
+@dp.callback_query(F.data.startswith("confirm_"))
+async def confirm_payment(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+    await bot.send_message(user_id, "✅ Оплата подтверждена. Курьер в ближайшее время заберёт мусор.")
+    await callback.answer("Оплата подтверждена.")
 
 # 🚀 Запуск приложения
 if __name__ == "__main__":
