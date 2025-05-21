@@ -57,7 +57,10 @@ async def show_instruction(callback: CallbackQuery):
         "🚀 Как мы работаем:\n\n"
         "1️⃣ Вы оставляете заявку через наш бот:\n"
         "- Нажимаете кнопку '📝 Оставить заявку'.\n"
-        "- Выбираете тип мусора (один пакет, несколько пакетов или крупный мусор).\n\n"
+        "- Выбираете тип мусора:\n"
+        "    • 🧺 Один пакет — 100 ₽\n"
+        "    • 🗑️ 2–3 пакета — 200 ₽\n"
+        "    • 🛢 Крупный мусор (до 30 кг) — 500 ₽\n"
         "2️⃣ Вы выбираете способ передачи мусора:\n"
         "- ✅ Мусор выставлен за дверь — курьер просто заберёт его.\n"
         "- 🚪 Курьер поднимется и заберёт лично — клиент должен быть дома.\n\n"
@@ -90,11 +93,12 @@ async def show_instruction(callback: CallbackQuery):
 @dp.callback_query(F.data == "new_order")
 async def new_order(callback: CallbackQuery, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=product, callback_data=f"product_{product}")]
-            for product in products.keys()
-        ]
-    )
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🧺 Один пакет мусора — 100 ₽", callback_data="product_🧺 Один пакет мусора")],
+        [InlineKeyboardButton(text="🗑️ 2–3 пакета мусора — 200 ₽", callback_data="product_🗑️ 2–3 пакета мусора")],
+        [InlineKeyboardButton(text="🛢 Крупный мусор (до 30 кг) — 500 ₽", callback_data="product_🛢 Крупный мусор")]
+    ]
+)
     await callback.message.answer("🗑️ Выберите тип мусора:", reply_markup=keyboard)
     await state.set_state(OrderStates.waiting_for_product)
 
