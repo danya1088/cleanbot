@@ -31,6 +31,8 @@ class OrderStates(StatesGroup):
     waiting_for_address = State()
     waiting_for_photo = State()
     waiting_for_payment_proof = State()
+    waiting_for_large_description = State()
+
 
 products = {
     "🧺 Один пакет мусора": 100,
@@ -106,7 +108,17 @@ async def new_order(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("product_"))
 async def choose_product(callback: CallbackQuery, state: FSMContext):
     product = callback.data.split("_", 1)[1]
+
+    if product == "🛢 Крупный мусор":
+        await state.update_data(product=product)
+        await callback.message.answer("❗ Пожалуйста, опишите, что именно вы хотите вынести (тип предметов, размер, вес):")
+        await callback.answer()
+        await state.set_state(OrderStates.waiting_for_large_description)
+        return  # <== ОЧЕНЬ ВАЖНО: дальше код НЕ ДОЛЖЕН выполняться
+
+    # Все остальные продукты — обычный порядок
     await state.update_data(product=product)
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -115,8 +127,28 @@ async def choose_product(callback: CallbackQuery, state: FSMContext):
             ]
         ]
     )
+
     await callback.message.answer("Выберите способ передачи мусора:", reply_markup=keyboard)
     await state.set_state(OrderStates.waiting_for_transfer)
+
+@dp.message(OrderStates.waiting_for_large_description)
+async def get_large_description(message: Message, state: FSMContext):
+    text = message.text.strip()
+    if len(text) < 10:
+        await message.answer("❗ Пожалуйста, опишите подробнее. Минимум 10 символов.")
+        return
+
+    await state.update_data(large_description=text)
+
+    # Кнопка связи с админом
+    contact_admin = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
+        ]
+    )
+
+    await message.answer("✅ Описание сохранено.\n📷 Теперь отправьте минимум 2 фото крупного мусора.", reply_markup=contact_admin)
+    await state.set_state(OrderStates.waiting_for_photo)
 
 @dp.callback_query(F.data.startswith("transfer_"))
 async def choose_transfer(callback: CallbackQuery, state: FSMContext):
@@ -191,12 +223,24 @@ async def get_address(message: Message, state: FSMContext):
     await message.answer("📷 Пожалуйста, отправьте фото мусора:")
     await state.set_state(OrderStates.waiting_for_photo)
 
-@dp.message(OrderStates.waiting_for_photo, F.photo)
+@dp.message(OrderStates.waiting_for_photo)
 async def photo_step(message: Message, state: FSMContext):
-    photo_id = message.photo[-1].file_id
-    await state.update_data(photo_id=photo_id)
-    data = await state.get_data()
+    if not message.photo:
+        await message.answer("❗ Пожалуйста, отправьте как минимум 2 фото мусора.")
+        return
 
+    data = await state.get_data()
+    photos = data.get("photos", [])
+    photos.append(message.photo[-1].file_id)
+
+    if len(photos) < 2:
+        await state.update_data(photos=photos)
+        await message.answer(f"📷 Получено {len(photos)} фото. Добавьте ещё минимум {2 - len(photos)}.")
+        return
+
+    await state.update_data(photos=photos)
+
+    # Здесь всё как раньше (вычисление цены, показ оплаты)
     product = data.get("product", "🧺 Один пакет мусора")
     products = {
         "🧺 Один пакет мусора": 100,
@@ -204,13 +248,12 @@ async def photo_step(message: Message, state: FSMContext):
         "🛢 Крупный мусор": 500
     }
     price = products.get(product, 0)
-
     await state.update_data(price=price)
 
     await message.answer(
         f"💳 Оплата: <b>{price} ₽</b>\n"
         f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
-        f"📸 После оплаты отправьте фото чека для подтверждения.",
+        "📸 После оплаты отправьте фото чека.",
         parse_mode="HTML"
     )
     await state.set_state(OrderStates.waiting_for_payment_proof)
