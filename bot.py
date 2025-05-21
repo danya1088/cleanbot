@@ -43,7 +43,7 @@ async def start(message: Message, state: FSMContext):
         inline_keyboard=[
             [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
             [InlineKeyboardButton(text="📄 Показать инструкцию", callback_data="show_instruction")],
-            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/YOUR_ADMIN_USERNAME")]
+            [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
         ]
     )
     await message.answer("📍 Добро пожаловать в сервис уборки мусора!")
