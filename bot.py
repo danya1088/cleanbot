@@ -32,6 +32,7 @@ class OrderStates(StatesGroup):
     waiting_for_photo = State()
     waiting_for_payment_proof = State()
     waiting_for_large_description = State()
+    waiting_for_large_photos = State()
 
 
 products = {
@@ -112,7 +113,6 @@ async def choose_product(callback: CallbackQuery, state: FSMContext):
     if product == "🛢 Крупный мусор":
         await state.update_data(product=product)
         await callback.message.answer("❗ Пожалуйста, опишите, что именно вы хотите вынести (тип предметов, размер, вес):")
-        await callback.answer()
         await state.set_state(OrderStates.waiting_for_large_description)
         return  # <== ОЧЕНЬ ВАЖНО: дальше код НЕ ДОЛЖЕН выполняться
 
@@ -230,23 +230,30 @@ async def photo_step(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
+    product = data.get("product", "")
     photos = data.get("photos", [])
-    photos.append(message.photo[-1].file_id)
-
-    if len(photos) < 2:
-        await state.update_data(photos=photos)
-        await message.answer(f"📷 Получено {len(photos)} фото. Добавьте ещё минимум {2 - len(photos)}.")
-        return
-
+    photo_id = message.photo[-1].file_id
+    photos.append(photo_id)
     await state.update_data(photos=photos)
 
-    # Здесь всё как раньше (вычисление цены, показ оплаты)
-    product = data.get("product", "🧺 Один пакет мусора")
-    products = {
-        "🧺 Один пакет мусора": 100,
-        "🗑️ 2–3 пакета мусора": 200,
-        "🛢 Крупный мусор": 500
-    }
+    # Если крупный мусор — минимум 2 фото и остановка на администраторе
+    if product == "🛢 Крупный мусор":
+        if len(photos) < 2:
+            await message.answer(f"📷 Получено {len(photos)} фото. Добавьте ещё минимум {2 - len(photos)}.")
+            return
+
+        await message.answer(
+            "📞 Для оформления заявки на крупный мусор необходимо связаться с администратором.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="📞 Связаться с администратором", url="https://t.me/danya1088")]
+                ]
+            )
+        )
+        await state.clear()
+        return
+
+    # Обычные заявки — сразу к оплате
     price = products.get(product, 0)
     await state.update_data(price=price)
 
