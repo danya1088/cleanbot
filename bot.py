@@ -50,7 +50,7 @@ async def start(message: Message, state: FSMContext):
 
     await message.answer("Выберите действие:", reply_markup=keyboard)
     await state.clear()
-    
+
 @dp.callback_query(F.data == "show_instruction")
 async def show_instruction(callback: CallbackQuery):
     instruction_text = (
@@ -77,7 +77,14 @@ async def show_instruction(callback: CallbackQuery):
         "- Курьер заберёт мусор в указанное время.\n"
         "- Вы получите уведомления: ✅ 'Мусор забран.' и 🚮 'Мусор выброшен.'"
     )
-    await callback.message.answer(instruction_text)
+
+    continue_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Продолжить", callback_data="new_order")]
+        ]
+    )
+
+    await callback.message.answer(instruction_text, reply_markup=continue_keyboard)
     await callback.answer()
 
 @dp.callback_query(F.data == "new_order")
