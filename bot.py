@@ -179,24 +179,27 @@ async def payment_proof(message: Message, state: FSMContext):
     await message.answer("✅ Спасибо! Курьер в ближайшее время заберёт мусор.")
     await state.clear()
 
-# Webhook запуск
+# 📌 Настройки Webhook
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", 10000))
 
+# 📩 Обработка входящих запросов от Telegram
 async def webhook_handler(request):
-    update = await request.json()
-    telegram_update = types.Update(**update)
-    await dp.feed_update(bot, telegram_update)
+    data = await request.json()
+    update = types.Update(**data)
+    await dp.feed_update(bot, update)
     return web.Response()
 
-async def main():
+# 🔄 Действия при запуске приложения
+async def on_startup(app):
     await bot.delete_webhook()
     await bot.set_webhook(WEBHOOK_URL)
 
-    app = web.Application()
-    app.router.add_post("/webhook", webhook_handler)
+# 🏗️ Инициализация aiohttp-приложения
+app = web.Application()
+app.router.add_post("/webhook", webhook_handler)
+app.on_startup.append(on_startup)
 
-    web.run_app(app, port=PORT)
-
+# 🚀 Запуск приложения
 if __name__ == "__main__":
-    asyncio.run(main())
+    web.run_app(app, port=PORT)
