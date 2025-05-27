@@ -96,15 +96,31 @@ async def show_instruction(callback: CallbackQuery):
 
 @dp.callback_query(F.data == "new_order")
 async def new_order(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
     keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🧺 Один пакет мусора — 100 ₽", callback_data="product_🧺 Один пакет мусора")],
-        [InlineKeyboardButton(text="🗑️ 2–3 пакета мусора — 200 ₽", callback_data="product_🗑️ 2–3 пакета мусора")],
-        [InlineKeyboardButton(text="🛢 Крупный мусор (до 30 кг) — 500 ₽", callback_data="product_🛢 Крупный мусор")]
-    ]
-)
-    await callback.message.answer("🗑️ Выберите тип мусора:", reply_markup=keyboard)
-    await state.set_state(OrderStates.waiting_for_product)
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🧺 Один пакет мусора — 100 ₽", callback_data="product_🧺 Один пакет мусора")],
+            [InlineKeyboardButton(text="🗑️ 2–3 пакета мусора — 200 ₽", callback_data="product_🗑️ 2–3 пакета мусора")],
+            [InlineKeyboardButton(text="🛢 Крупный мусор (до 30 кг) — 500 ₽", callback_data="product_🛢 Крупный мусор")],
+            [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_start")]
+        ]
+    )
+    await callback.message.answer("Выберите тип мусора:", reply_markup=keyboard)
+    await callback.answer()
+
+@dp.callback_query(F.data == "back_to_start")
+async def back_to_start(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer(
+        "📋 Для оформления новой заявки нажмите кнопку:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="📝 Оставить заявку", callback_data="new_order")],
+                [InlineKeyboardButton(text="📄 Показать инструкцию", callback_data="show_instruction")]
+            ]
+        )
+    )
+    await callback.answer()
 
 @dp.callback_query(F.data.startswith("product_"))
 async def choose_product(callback: CallbackQuery, state: FSMContext):
@@ -153,12 +169,28 @@ async def choose_transfer(callback: CallbackQuery, state: FSMContext):
     today = datetime.now().strftime("%d.%m.%Y")
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
-            [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")]
-        ]
+keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
+        [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")],
+        [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_product")]
+    ]
+)
+
+@dp.callback_query(F.data == "back_to_product")
+async def back_to_product(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        "Выберите тип мусора:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🧺 Один пакет мусора — 100 ₽", callback_data="product_🧺 Один пакет мусора")],
+                [InlineKeyboardButton(text="🗑️ 2–3 пакета мусора — 200 ₽", callback_data="product_🗑️ 2–3 пакета мусора")],
+                [InlineKeyboardButton(text="🛢 Крупный мусор (до 30 кг) — 500 ₽", callback_data="product_🛢 Крупный мусор")],
+                [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_start")]
+            ]
+        )
     )
+    await callback.answer()
 
     # 🔵 А уже потом отправляем сообщение
     await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
@@ -205,11 +237,20 @@ async def choose_date(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("time_"))
 async def choose_time(callback: CallbackQuery, state: FSMContext):
     time_chosen = callback.data.split("_", 1)[1]
+    if message.text.lower() in ["назад", "⬅ назад"]:
+        await message.answer("⏪ Возвращаемся к выбору даты.")
+        await state.set_state(OrderStates.waiting_for_date)
+        return
     await state.update_data(time=time_chosen)
     await callback.message.answer("📍 Укажите точный адрес (улица, дом, подъезд, этаж, код, квартира):")
     await state.set_state(OrderStates.waiting_for_address)
 
 @dp.message(OrderStates.waiting_for_address)
+if message.text.lower() in ["назад", "⬅ назад"]:
+        await message.answer("⏪ Возвращаемся к выбору даты.")
+        await state.set_state(OrderStates.waiting_for_date)
+        return
+
 async def get_address(message: Message, state: FSMContext):
     await state.update_data(address=message.text)
     await message.answer("📷 Пожалуйста, отправьте фото мусора:")
@@ -348,8 +389,3 @@ async def dumped(callback: CallbackQuery):
 # 🚀 Запуск приложения
 if __name__ == "__main__":
     web.run_app(app, port=PORT)
-
-
-@dp.message_handler(lambda message: message.text == "🔙 Назад")
-async def handle_back(message: types.Message):
-    await message.answer("Вы вернулись в главное меню.", reply_markup=start_keyboard)
