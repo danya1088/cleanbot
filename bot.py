@@ -348,3 +348,8 @@ async def dumped(callback: CallbackQuery):
 # 🚀 Запуск приложения
 if __name__ == "__main__":
     web.run_app(app, port=PORT)
+
+
+@dp.message_handler(lambda message: message.text == "🔙 Назад")
+async def handle_back(message: types.Message):
+    await message.answer("Вы вернулись в главное меню.", reply_markup=start_keyboard)
