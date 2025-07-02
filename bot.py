@@ -246,12 +246,12 @@ async def choose_time(callback: CallbackQuery, state: FSMContext):
     await state.set_state(OrderStates.waiting_for_address)
 
 @dp.message(OrderStates.waiting_for_address)
-if message.text.lower() in ["назад", "⬅ назад"]:
+async def get_address(message: Message, state: FSMContext):
+    if message.text.lower() in ["назад", "⬅ назад"]:
         await message.answer("⏪ Возвращаемся к выбору даты.")
         await state.set_state(OrderStates.waiting_for_date)
         return
 
-async def get_address(message: Message, state: FSMContext):
     await state.update_data(address=message.text)
     await message.answer("📷 Пожалуйста, отправьте фото мусора:")
     await state.set_state(OrderStates.waiting_for_photo)
