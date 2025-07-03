@@ -319,11 +319,13 @@ async def photo_step(message: Message, state: FSMContext):
         return
 
     await message.answer(
-        f"💳 Оплата: <b>{price} ₽</b>\n"
-        f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
-        "📸 После оплаты отправьте фото чека.",
-        parse_mode="HTML"
+    f"💳 Оплата: <b>{price} ₽</b>\n"
+    f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
+    "📸 После оплаты отправьте фото чека.",
+    parse_mode="HTML"
 )
+    await state.set_state(OrderStates.waiting_for_payment_proof)  # <== вот это добавьте
+
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
 async def payment_proof(message: Message, state: FSMContext):
