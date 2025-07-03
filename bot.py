@@ -269,62 +269,48 @@ async def get_address(message: Message, state: FSMContext):
     await message.answer("📷 Пожалуйста, отправьте фото мусора.")
     await state.set_state(OrderStates.waiting_for_photo)
 
-@dp.message(OrderStates.waiting_for_photo)
+@router.message(StateFilter(Form.photo), F.photo)
 async def photo_step(message: Message, state: FSMContext):
-    if not message.photo:
-        await message.answer("❗ Пожалуйста, отправьте как минимум 2 фото мусора.")
+    data = await state.get_data()
+    product = data.get("product")
+
+    if not product or product not in products:
+        await message.answer("❗ Ошибка: не удалось определить услугу. Пожалуйста, начните заявку заново.")
+        await state.clear()
         return
 
-    data = await state.get_data()
-    product = data.get("product", "")
-    photos = data.get("photos", [])
+    price = products[product]
+    await state.update_data(price=price)
+
     photo_id = message.photo[-1].file_id
+    photos = data.get("photos", [])
     photos.append(photo_id)
     await state.update_data(photos=photos)
 
-    if product == "🛢 Крупный мусор":
+    if product == "Крупный мусор":
         if len(photos) < 2:
-            await message.answer(f"📷 Получено {len(photos)} фото. Добавьте ещё минимум {2 - len(photos)}.")
+            await message.answer("📸 Пожалуйста, отправьте минимум 2 фотографии крупного мусора.")
             return
-
-        desc = data.get("large_description", "—")
-        caption = (
-            f"🛢 <b>Заявка на крупный мусор</b>\n"
-            f"👤 Пользователь: @{message.from_user.username or 'Без ника'}\n"
-            f"📝 Описание: {desc}\n"
-            f"🕐 Заявка без автоматической оплаты — требуется ручная обработка."
+        await message.answer(
+            "📝 Напишите краткое описание мусора. Без описания заявка не будет принята.",
         )
-
-        media = [types.InputMediaPhoto(media=pid) for pid in photos[:10]]
-        if media:
-            media[0].caption = caption
-            media[0].parse_mode = "HTML"
-            await bot.send_media_group(chat_id=GROUP_CHAT_ID, media=media)
-        else:
-            await bot.send_message(GROUP_CHAT_ID, caption, parse_mode="HTML")
-
-        await message.answer("📨 Заявка отправлена администратору. Ожидайте связи.")
-        await state.clear()
+        await state.set_state(Form.description)
         return
 
-    # обычный порядок
-    product = data.get("product", "")
-    price = products.get(product, 0)
-
-    await state.update_data(price=price)
-
-    if not price:
-        await message.answer("❗ Ошибка: не удалось определить стоимость. Пожалуйста, начните заявку заново.")
-        await state.clear()
+    if len(photos) < 1:
+        await message.answer("📸 Пожалуйста, отправьте хотя бы одну фотографию.")
         return
 
+    # Отправка реквизитов
     await message.answer(
-    f"💳 Оплата: <b>{price} ₽</b>\n"
-    f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
-    "📸 После оплаты отправьте фото чека.",
-    parse_mode="HTML"
-)
-    await state.set_state(OrderStates.waiting_for_payment_proof)  # <== вот это добавьте
+        f"💰 Стоимость услуги: {price}₽\n"
+        "Переведите сумму по номеру телефона:\n📱 +79877579144 (Озон банк)\n\n"
+        "📎 После перевода, пожалуйста, отправьте фото чека.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_address")]
+        ])
+    )
+    await state.set_state(Form.payment_proof)
 
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
