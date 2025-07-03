@@ -161,7 +161,7 @@ async def get_large_description(message: Message, state: FSMContext):
 @dp.callback_query(F.data.startswith("transfer_"))
 async def choose_transfer(callback: CallbackQuery, state: FSMContext):
     transfer_method = "Выставлен за дверь" if "door" in callback.data else "Курьер поднимется"
-    await state.update_data(transfer=transfer_method)
+    await state.update_data(transfer=transfer_method, contact_method=transfer_method)
     await callback.answer()
 
     today = datetime.now().strftime("%d.%m.%Y")
@@ -238,7 +238,7 @@ async def choose_date(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("time_"))
 async def choose_time(callback: CallbackQuery, state: FSMContext):
     time_chosen = callback.data.split("_", 1)[1]
-    await state.update_data(time=time_chosen)
+    await state.update_data(time_slot=time_chosen)
     await callback.message.answer("📍 Укажите точный адрес (улица, дом, подъезд, этаж, код, квартира):")
     await state.set_state(OrderStates.waiting_for_address)
     await callback.answer()
@@ -352,7 +352,7 @@ async def payment_proof(message: Message, state: FSMContext):
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton("✅ Подтвердить оплату", callback_data="confirm_payment")]
+                [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_{message.from_user.id}")]
             ]
         )
 
