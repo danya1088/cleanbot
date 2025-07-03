@@ -330,45 +330,45 @@ async def photo_step(message: Message, state: FSMContext):
 async def payment_proof(message: Message, state: FSMContext):
     try:
         data = await state.get_data()
-        product = data.get("product")
-        address = data.get("address")
-        time_slot = data.get("time_slot")
-        date = data.get("date")
-        total_price = data.get("price", "неизвестно")
-        contact_method = data.get("contact_method", "не указано")
+        product = data.get("product", "не указано")
+        address = data.get("address", "не указан")
+        date = data.get("date", "не указана")
+        time_slot = data.get("time_slot", "не указано")
+        price = data.get("price", "неизвестно")
+        contact_method = data.get("contact_method", "не указан")
 
-        proof = message.photo[-1]
-        proof_id = proof.file_id
+        photo = message.photo[-1]
+        file_id = photo.file_id
 
         caption = (
-            f"🧾 Новый чек об оплате\n"
+            f"🧾 Чек об оплате\n"
             f"📦 Услуга: {product}\n"
             f"📍 Адрес: {address}\n"
             f"📅 Дата: {date}, Время: {time_slot}\n"
-            f"💬 Способ передачи: {contact_method}\n"
-            f"💰 Сумма: {total_price}₽\n\n"
-            f"✅ Подтвердите оплату ниже."
+            f"🚪 Способ передачи: {contact_method}\n"
+            f"💰 Сумма: {price} ₽\n\n"
+            f"✅ Подтвердите оплату:"
         )
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data="confirm_payment")]
+                [InlineKeyboardButton("✅ Подтвердить оплату", callback_data="confirm_payment")]
             ]
         )
 
         await bot.send_photo(
             chat_id=int(GROUP_CHAT_ID),
-            photo=proof_id,
+            photo=file_id,
             caption=caption,
             reply_markup=keyboard
         )
 
-        await message.answer("✅ Чек получен. Ожидайте подтверждения оплаты от администратора.")
+        await message.answer("✅ Чек получен. Ожидайте подтверждения от администратора.")
         await state.clear()
 
     except Exception as e:
-        print(f"[ОШИБКА при получении чека]: {e}")
-        await message.answer("⚠️ Произошла ошибка при обработке чека. Пожалуйста, попробуйте снова или напишите администратору.")
+        await message.answer("⚠️ Произошла ошибка. Попробуйте снова или обратитесь к администратору.")
+        print(f"[Ошибка чека]: {e}")
 
 # 📌 Настройки Webhook
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
