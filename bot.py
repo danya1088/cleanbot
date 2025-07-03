@@ -276,8 +276,15 @@ async def photo_step(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    product = data.get("product", "")
+    product = data.get("product")
     photos = data.get("photos", [])
+
+    if not product or product not in products:
+        await message.answer("❗ Ошибка: не удалось определить услугу. Пожалуйста, начните заявку заново.")
+        await state.clear()
+        return
+
+    # Добавляем новое фото
     photo_id = message.photo[-1].file_id
     photos.append(photo_id)
     await state.update_data(photos=photos)
@@ -308,22 +315,16 @@ async def photo_step(message: Message, state: FSMContext):
         return
 
     # обычный порядок
-    product = data.get("product")
-    if not product or product not in products:
-        await message.answer("❗ Ошибка: не удалось определить услугу. Пожалуйста, начните заявку заново.")
-        await state.clear()
-        return
-
     price = products[product]
     await state.update_data(price=price)
 
     await message.answer(
-    f"💳 Оплата: <b>{price} ₽</b>\n"
-    f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
-    "📸 После оплаты отправьте фото чека.",
-    parse_mode="HTML"
-)
-    await state.set_state(OrderStates.waiting_for_payment_proof)  # <== вот это добавьте
+        f"💳 Оплата: <b>{price} ₽</b>\n"
+        f"Перевод на номер <b>{PHONE_NUMBER}</b> ({BANK_NAME}).\n"
+        "📸 После оплаты отправьте фото чека.",
+        parse_mode="HTML"
+    )
+    await state.set_state(OrderStates.waiting_for_payment_proof)
 
 @dp.message(OrderStates.waiting_for_payment_proof, F.photo)
 async def payment_proof(message: Message, state: FSMContext):
