@@ -330,12 +330,43 @@ async def photo_step(message: Message, state: FSMContext):
 async def payment_proof(message: Message, state: FSMContext):
     try:
         data = await state.get_data()
-        product = data.get("product", "не указано")
+        product = data.get("product")
         address = data.get("address", "не указан")
         date = data.get("date", "не указана")
         time_slot = data.get("time_slot", "не указано")
         price = data.get("price", "неизвестно")
         contact_method = data.get("contact_method", "не указан")
+
+        if not product or not price:
+            await message.answer("⚠️ Произошла ошибка. Пожалуйста, начните заявку заново.")
+            await state.clear()
+            return
+
+        file_id = message.photo[-1].file_id
+
+        caption = (
+    f"📄 Чек об оплате\n"
+    f"📦 Услуга: {product}\n"
+    f"📍 Адрес: {address}\n"
+    f"📅 Дата: {date}, Время: {time_slot}\n"
+    f"🚪 Способ передачи: {contact_method}\n"
+    f"💰 Сумма: {price} ₽\n\n"
+    f"✅ Подтвердите оплату:"
+)
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton("✅ Подтвердить оплату", callback_data=f"confirm_{message.from_user.id}")]
+            ]
+        )
+
+        await bot.send_photo(chat_id=GROUP_CHAT_ID, photo=file_id, caption=caption, reply_markup=keyboard)
+        await message.answer("✅ Чек получен. Ожидайте подтверждения от администратора.")
+        await state.clear()
+
+    except Exception as e:
+        await message.answer("⚠️ Произошла ошибка. Попробуйте снова или обратитесь к администратору.")
+        print(f"[Ошибка чека]: {e}")
 
         photo = message.photo[-1]
         file_id = photo.file_id
