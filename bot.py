@@ -326,31 +326,46 @@ async def photo_step(message: Message, state: FSMContext):
     )
     await state.set_state(OrderStates.waiting_for_payment_proof)
 
-@dp.message(F.photo, StateFilter(FSMFillForm.waiting_for_receipt))
-async def process_receipt(message: Message, state: FSMContext):
+@dp.message(OrderStates.waiting_for_payment_proof)
+async def process_payment_proof(message: Message, state: FSMContext):
     try:
         data = await state.get_data()
-        admin_chat_id = int(os.getenv("GROUP_CHAT_ID", "-1001234567890"))  # Замените ID на свой
+        receipt_photo = message.photo[-1].file_id
+        await state.update_data(receipt_photo=receipt_photo)
 
-        # Сохраняем файл
-        file_id = message.photo[-1].file_id
-        await state.update_data(receipt_photo=file_id)
+        product = data.get("product", "❓")
+        price = data.get("price", "❓")
+        address = data.get("address", "❓")
+        date = data.get("date", "❓")
+        time = data.get("time_slot", "❓")
+        transfer = data.get("transfer", "❓")
+        username = message.from_user.username or message.from_user.full_name
+        user_id = message.from_user.id
 
-        # Отправляем админу
         caption = (
-            f"🧾 Новый чек об оплате\n"
-            f"🆔 Заявка: {data.get('order_id', '❓')}\n"
-            f"💳 Сумма: {data.get('price', 'не указана')} ₽\n"
-            f"👤 Пользователь: @{message.from_user.username or message.from_user.full_name}"
+            f"📦 Новая заявка\n"
+            f"👤 Пользователь: @{username}\n"
+            f"🆔 Telegram ID: <code>{user_id}</code>\n"
+            f"🧾 Услуга: {product}\n"
+            f"💳 Сумма: {price} ₽\n"
+            f"📍 Адрес: {address}\n"
+            f"📆 Дата: {date}, {time}\n"
+            f"🚪 Способ передачи: {transfer}\n\n"
+            f"📸 Чек об оплате ниже:"
         )
-        await bot.send_photo(chat_id=admin_chat_id, photo=file_id, caption=caption)
 
-        # Сообщаем клиенту
+        confirm_keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data=f"confirm_{user_id}")]
+            ]
+        )
+
+        await bot.send_photo(chat_id=GROUP_CHAT_ID, photo=receipt_photo, caption=caption, reply_markup=confirm_keyboard)
         await message.answer("✅ Чек получен. Ожидайте подтверждения от администратора.")
-        await state.set_state(FSMFillForm.waiting_for_admin_confirmation)
+        await state.clear()
 
     except Exception as e:
-        print(f"Ошибка при обработке чека: {e}")
+        print(f"[Ошибка при получении чека] {e}")
         await message.answer("❗ Произошла ошибка. Попробуйте снова или обратитесь к администратору.")
 
 # 📌 Настройки Webhook
