@@ -162,20 +162,21 @@ async def get_large_description(message: Message, state: FSMContext):
 async def choose_transfer(callback: CallbackQuery, state: FSMContext):
     transfer_method = "Выставлен за дверь" if "door" in callback.data else "Курьер поднимется"
     await state.update_data(transfer=transfer_method)
-
-    # 🟢 Сначала подтверждаем callback
     await callback.answer()
 
     today = datetime.now().strftime("%d.%m.%Y")
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
 
-keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
-        [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")],
-        [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_product")]
-    ]
-)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
+            [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")],
+            [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_product")]
+        ]
+    )
+
+    await callback.message.answer("Выберите дату выполнения заявки:", reply_markup=keyboard)
+    await state.set_state(OrderStates.waiting_for_date)
 
 @dp.callback_query(F.data == "back_to_product")
 async def back_to_product(callback: CallbackQuery, state: FSMContext):
@@ -237,24 +238,24 @@ async def choose_date(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("time_"))
 async def choose_time(callback: CallbackQuery, state: FSMContext):
     time_chosen = callback.data.split("_", 1)[1]
-    if message.text.lower() in ["назад", "⬅ назад"]:
-        await message.answer("⏪ Возвращаемся к выбору даты.")
-        await state.set_state(OrderStates.waiting_for_date)
-        return
     await state.update_data(time=time_chosen)
     await callback.message.answer("📍 Укажите точный адрес (улица, дом, подъезд, этаж, код, квартира):")
     await state.set_state(OrderStates.waiting_for_address)
+    await callback.answer()
 
-@dp.message(OrderStates.waiting_for_address)
-async def get_address(message: Message, state: FSMContext):
-    if message.text.lower() in ["назад", "⬅ назад"]:
-        await message.answer("⏪ Возвращаемся к выбору даты.")
-        await state.set_state(OrderStates.waiting_for_date)
-        return
+from datetime import datetime, timedelta
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-    await state.update_data(address=message.text)
-    await message.answer("📷 Пожалуйста, отправьте фото мусора:")
-    await state.set_state(OrderStates.waiting_for_photo)
+today = datetime.now().strftime("%d.%m.%Y")
+tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
+
+keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Сегодня ({today})", callback_data=f"date_{today}")],
+        [InlineKeyboardButton(text=f"📅 Завтра ({tomorrow})", callback_data=f"date_{tomorrow}")],
+        [InlineKeyboardButton(text="⬅ Назад", callback_data="back_to_product")]
+    ]
+)
 
 @dp.message(OrderStates.waiting_for_photo)
 async def photo_step(message: Message, state: FSMContext):
