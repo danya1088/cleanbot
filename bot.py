@@ -257,6 +257,18 @@ keyboard = InlineKeyboardMarkup(
     ]
 )
 
+@dp.message(OrderStates.waiting_for_address)
+async def get_address(message: Message, state: FSMContext):
+    address = message.text.strip()
+    if len(address) < 5:
+        await message.answer("❗ Пожалуйста, укажите корректный адрес.")
+        return
+
+    await state.update_data(address=address)
+
+    await message.answer("📷 Пожалуйста, отправьте фото мусора.")
+    await state.set_state(OrderStates.waiting_for_photo)
+
 @dp.message(OrderStates.waiting_for_photo)
 async def photo_step(message: Message, state: FSMContext):
     if not message.photo:
